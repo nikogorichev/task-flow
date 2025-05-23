@@ -1,6 +1,14 @@
 import type { Task, TaskInput } from "../types/Task";
 
-export class TaskManager {
+export interface TaskManager {
+  addTask(input: TaskInput): Task;
+  getTasks(): Task[];
+  completeTask(id: string): void;
+  deleteTask(id: string): void;
+  restoreTask(id: string): void;
+}
+
+export class TaskManagerImpl implements TaskManager {
   private tasks: Task[] = [];
 
   addTask(input: TaskInput): Task {
@@ -24,7 +32,12 @@ export class TaskManager {
     if (task) task.status = "done";
   }
 
-  clear(): void {
-    this.tasks = [];
+  deleteTask(id: string): void {
+    this.tasks = this.tasks.filter((t) => t.id !== id);
+  }
+
+  restoreTask(id: string): void {
+    const task = this.tasks.find((t) => t.id === id);
+    if (task) task.status = "active";
   }
 }

@@ -24,15 +24,24 @@
     <script type="module" src="/src/main.ts"></script> -->
     <h1>TaskFlow</h1>
     <form id="task-form">
-      <input id="task-title" type="text" placeholder="New task title" required />
+      <input id="task-title" type="text" placeholder="Название задачи" required />
       <select id="task-priority">
-        <option value="low">Low</option>
-        <option value="medium">Medium</option>
-        <option value="high">High</option>
+        <option value="low">Низкий</option>
+        <option value="medium">Средний</option>
+        <option value="high">Высокий</option>
       </select>
-      <button type="submit">Add Task</button>
+      <button type="submit">Добавить задачу</button>
     </form>
-    <div id="task-list"></div>
+    <div class="columns">
+      <div class="column" id="active-column">
+        <h2>Что надо сделать</h2>
+        <div id="active-list"></div>
+      </div>
+      <div class="column" id="done-column">
+        <h2>Что сделал</h2>
+        <div id="done-list"></div>
+      </div>
+    </div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

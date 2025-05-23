@@ -1,6 +1,6 @@
-import { TaskManager } from "./service/TaskManager.ts";
+import { TaskManagerImpl } from "./service/TaskManager";
 import "./style.css";
-import type { Task } from "./types/Task.ts";
+import type { Priority, Task } from "./types/Task";
 import { taskStepper } from "./generators/taskGenerator";
 
 const sorterWorker = new Worker(
@@ -15,36 +15,71 @@ const taskTitle = document.getElementById("task-title") as HTMLInputElement;
 const taskPriority = document.getElementById(
   "task-priority"
 ) as HTMLSelectElement;
-const taskList = document.getElementById("task-list") as HTMLDivElement;
+const activeList = document.getElementById("active-list") as HTMLDivElement;
+const doneList = document.getElementById("done-list") as HTMLDivElement;
 
-const manager = new TaskManager();
+const managerService = new TaskManagerImpl();
 const taskElements = new WeakMap<HTMLElement, Task>();
 
-function renderTasksSorted(tasks: Task[]) {
+const renderTasksByStatus = (tasks: Task[]) => {
   sorterWorker.postMessage(tasks);
-}
+};
 
-sorterWorker.onmessage = (e: MessageEvent<Task[]>) => {
-  taskList.innerHTML = "";
-  const generator = taskStepper(e.data);
+const renderTask = (task: Task) => {
+  const div = document.createElement("div");
+  div.className = "task";
+  div.textContent = `${task.title} [${task.priority}]`;
+
+  const buttons = document.createElement("div");
+  buttons.className = "task-buttons";
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.textContent = "Удалить";
+  deleteBtn.className = "delete";
+  deleteBtn.onclick = () => {
+    managerService.deleteTask(task.id);
+    renderTasksByStatus(managerService.getTasks());
+  };
+
+  if (task.status === "active") {
+    const completeBtn = document.createElement("button");
+    completeBtn.textContent = "Завершить";
+    completeBtn.onclick = () => {
+      managerService.completeTask(task.id);
+      renderTasksByStatus(managerService.getTasks());
+    };
+    buttons.append(completeBtn);
+    activeList.appendChild(div);
+  } else {
+    const restoreBtn = document.createElement("button");
+    restoreBtn.textContent = "Вернуть";
+    restoreBtn.className = "restore";
+    restoreBtn.onclick = () => {
+      managerService.restoreTask(task.id);
+      renderTasksByStatus(managerService.getTasks());
+    };
+    buttons.append(restoreBtn);
+    doneList.appendChild(div);
+  }
+
+  buttons.append(deleteBtn);
+  div.appendChild(buttons);
+  taskElements.set(div, task);
+};
+
+sorterWorker.onmessage = (event: MessageEvent<Task[]>) => {
+  activeList.innerHTML = "";
+  doneList.innerHTML = "";
+  const generator = taskStepper(event.data);
 
   const next = () => {
     const result = generator.next();
-    if (result.done) return;
+    if (result.done) {
+      return;
+    }
 
-    const task = result.value;
-    const div = document.createElement("div");
-    div.className = "task";
-    div.textContent = `${task.title} [${task.priority}] - ${task.status}`;
-    taskList.appendChild(div);
-
-    taskElements.set(div, task);
-    div.addEventListener("click", () => {
-      manager.completeTask(task.id);
-      renderTasksSorted(manager.getTasks());
-    });
-
-    next()
+    renderTask(result.value);
+    next();
   };
 
   next();
@@ -53,11 +88,13 @@ sorterWorker.onmessage = (e: MessageEvent<Task[]>) => {
 taskForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const title = taskTitle.value.trim();
-  const priority = taskPriority.value as "low" | "medium" | "high";
-  if (!title) return;
-  manager.addTask({ title, priority });
-  renderTasksSorted(manager.getTasks());
+  const priority = taskPriority.value as Priority;
+  if (!title) {
+    return;
+  }
+  managerService.addTask({ title, priority });
+  renderTasksByStatus(managerService.getTasks());
   taskForm.reset();
 });
 
-renderTasksSorted(manager.getTasks());
+renderTasksByStatus(managerService.getTasks());
